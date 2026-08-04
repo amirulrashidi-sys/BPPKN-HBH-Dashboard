@@ -31,26 +31,10 @@ DUTY = "LUAR"
 
 STATUSES = (OFFICE, WFH, LEAVE, DUTY)
 
-STATUS_LABEL = {
-    OFFICE: "Di pejabat",
-    WFH: "Bekerja dari rumah",
-    LEAVE: "Cuti",
-    DUTY: "Tugas luar",
-}
-STATUS_SHORT = {OFFICE: "PEJABAT", WFH: "BDR", LEAVE: "CUTI", DUTY: "LUAR"}
-
 # Policy: staff may claim up to two work-from-home days, Tuesday to Thursday.
 WFH_WEEKDAYS = (2, 3, 4)          # ISO weekday numbers, Monday = 1
 MAX_WFH_PER_WEEK = 2
 WORK_WEEKDAYS = (1, 2, 3, 4, 5)   # Monday to Friday
-
-DAY_FULL = {1: "Isnin", 2: "Selasa", 3: "Rabu", 4: "Khamis", 5: "Jumaat"}
-DAY_ABBR = {1: "ISN", 2: "SEL", 3: "RAB", 4: "KHA", 5: "JUM"}
-MONTH_BM = {
-    1: "Januari", 2: "Februari", 3: "Mac", 4: "April", 5: "Mei", 6: "Jun",
-    7: "Julai", 8: "Ogos", 9: "September", 10: "Oktober",
-    11: "November", 12: "Disember",
-}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS staff (
@@ -132,18 +116,6 @@ def shift_week(iso_year: int, iso_week: int, delta: int) -> tuple[int, int]:
     moved = monday.fromordinal(monday.toordinal() + delta * 7)
     y, w, _ = moved.isocalendar()
     return y, w
-
-
-def week_range_label(iso_year: int, iso_week: int) -> str:
-    days = week_dates(iso_year, iso_week)
-    a, b = days[1], days[5]
-    if a.month == b.month:
-        return f"{a.day}\u2013{b.day} {MONTH_BM[b.month]} {b.year}"
-    return f"{a.day} {MONTH_BM[a.month]} \u2013 {b.day} {MONTH_BM[b.month]} {b.year}"
-
-
-def date_label(d: date) -> str:
-    return f"{d.day} {MONTH_BM[d.month]} {d.year}"
 
 
 # --------------------------------------------------------------------- staff
@@ -258,19 +230,11 @@ def person_week(staff_id: int, iso_year: int, iso_week: int) -> dict[int, tuple[
     return out
 
 
-def validate_week(plan: dict[int, str]) -> list[str]:
-    """Return a list of policy problems; empty list means the plan is valid."""
-    problems = []
-    wfh_days = [wd for wd, s in plan.items() if s == WFH]
-    if len(wfh_days) > MAX_WFH_PER_WEEK:
-        problems.append(
-            f"Anda memilih {len(wfh_days)} hari BDR. Maksimum {MAX_WFH_PER_WEEK} hari seminggu."
-        )
-    stray = sorted(wd for wd in wfh_days if wd not in WFH_WEEKDAYS)
-    if stray:
-        names = ", ".join(DAY_FULL[wd] for wd in stray)
-        problems.append(f"BDR hanya dibenarkan Selasa hingga Khamis. Sila betulkan: {names}.")
-    return problems
+def week_is_valid(plan: dict[int, str]) -> bool:
+    """True when the plan obeys the quota and the allowed weekdays."""
+    wfh_days = [wd for wd, st in plan.items() if st == WFH]
+    return (len(wfh_days) <= MAX_WFH_PER_WEEK
+            and all(wd in WFH_WEEKDAYS for wd in wfh_days))
 
 
 def save_person_week(

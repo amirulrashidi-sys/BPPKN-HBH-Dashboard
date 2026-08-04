@@ -92,7 +92,33 @@ goes with it. Schedules would be lost. Two ways to handle it:
 Running on the office network (option 2) has neither problem: the database is
 just a file on that machine.
 
-## 6. Changing the policy
+## 6. Language and theme
+
+All the text lives in `i18n.py`, two entries per line:
+
+```python
+"save_mine": {"bm": "Simpan jadual saya", "en": "Save my schedule"},
+```
+
+Correct a wording by editing the string; add a third language by adding a
+code to `LANGS`, a name to `LANG_NAME`, and a third key to every entry
+(`DAY_FULL`, `DAY_ABBR`, `MONTH`, `STATUS_SHORT` and `STATUS_LABEL` too). To
+open in English by default, change the fallback in `app.py`'s `_init_state`
+from `"bm"` to `"en"`.
+
+The two palettes are at the top of `theme.py` in `PALETTES`. Every colour the
+app draws comes from there, so changing `brass` in both blocks restyles the
+accent everywhere. The app declares its own colours for Streamlit's widgets
+rather than inheriting them, which is what keeps text readable whichever base
+theme a viewer's browser or Streamlit account happens to prefer.
+
+One known limit: the directory editor in the Direktori tab is a
+`st.data_editor`, which draws into a canvas that follows Streamlit's own base
+theme rather than this app's switch. It stays light while the rest of the page
+goes dark. It is admin-only and fully functional, so this is cosmetic. Every
+other table on the page is drawn as HTML and does follow the switch.
+
+## 7. Changing the policy
 
 Everything lives at the top of `store.py`:
 
@@ -109,7 +135,7 @@ Statuses are defined just above them if you need to add, say, *Kursus* or
 *Bertugas Parlimen* — add the constant, a label, and a colour in `theme.py`
 under `_SW` and the `.c-XXX` CSS rules.
 
-## 7. Editing names
+## 8. Editing names
 
 Direktori tab, with the admin code entered. It is a spreadsheet-style table:
 
@@ -123,7 +149,7 @@ Direktori tab, with the admin code entered. It is a spreadsheet-style table:
 Press **Simpan direktori** to apply. `staff_seed.csv` is only read once, on
 the very first run, so editing it later changes nothing — use the tab.
 
-## 8. Making the data survive restarts
+## 9. Making the data survive restarts
 
 If you deploy publicly and want durable storage, the change is confined to
 `store.py` — every read and write already goes through the functions there.
@@ -143,13 +169,14 @@ Tell me which you want and I will write it — it is a contained change, but it
 needs testing against real credentials, so I would rather do it properly than
 hand you something untested.
 
-## 9. Files
+## 10. Files
 
 | File | What it does |
 |---|---|
 | `app.py` | The four tabs and all the widgets |
 | `store.py` | Database, policy rules, backup and restore |
-| `theme.py` | Styling, and the HTML for the day cards and roster grid |
+| `theme.py` | The two palettes, and the HTML for the day cards and roster grid |
+| `i18n.py` | Every piece of UI text, in Bahasa Melayu and English |
 | `staff_seed.csv` | The 25 officers, read on first run only |
 | `requirements.txt` | Three dependencies |
 | `.streamlit/config.toml` | Colours, so Streamlit's own widgets match the board |

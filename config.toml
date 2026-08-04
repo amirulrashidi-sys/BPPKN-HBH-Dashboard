@@ -1,6 +1,9 @@
+# The app draws its own colours (see theme.py) for both light and dark.
+# primaryColor is left as brass because Streamlit uses it for the radio dots
+# and the tab underline, which read correctly on either background.
 [theme]
 base = "light"
-primaryColor = "#12233F"
+primaryColor = "#A8791C"
 backgroundColor = "#EEF1F4"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#12233F"
