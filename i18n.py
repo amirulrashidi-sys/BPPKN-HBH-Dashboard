@@ -87,7 +87,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "today_mark": {"bm": "Hari ini", "en": "Today"},
 
     # ---- tabs
-    "tab_board": {"bm": "Papan Jadual", "en": "Roster Board"},
+    "tab_board": {"bm": "Jadual HBH", "en": "WFH Board"},
     "tab_mine": {"bm": "Jadual Saya", "en": "My Schedule"},
     "tab_summary": {"bm": "Ringkasan", "en": "Summary"},
     "tab_dir": {"bm": "Direktori", "en": "Directory"},
