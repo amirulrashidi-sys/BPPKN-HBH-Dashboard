@@ -44,8 +44,8 @@ STATUS_LABEL = {
 
 STRINGS: dict[str, dict[str, str]] = {
     # ---- masthead
-    "app_title": {"bm": "Papan Jadual Bekerja Dari Rumah",
-                  "en": "Work From Home Roster"},
+    "app_title": {"bm": "Dashboard Jadual Bekerja Dari Rumah",
+                  "en": "Work From Home Dashboard"},
     "org_line": {
         "bm": "Bahagian Perisikan dan Pengurusan Krisis Negara "
               "&middot; Majlis Keselamatan Negara &middot; Putrajaya",
