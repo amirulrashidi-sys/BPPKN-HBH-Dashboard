@@ -1,4 +1,4 @@
-"""Dashboard Hari Bekerja Kak Zai — BPPKN, Majlis Keselamatan Negara.
+"""Dashboard Hari Bekerja Hibrid — BPPKN, Majlis Keselamatan Negara.
 
 Run locally:      streamlit run app.py
 Share on the LAN: streamlit run app.py --server.address 0.0.0.0 --server.port 8501
