@@ -1,4 +1,4 @@
-"""Dashboard Hari Bekerja Hibrid — BPPKN, Majlis Keselamatan Negara.
+"""Papan Jadual Bekerja Dari Rumah — BPPKN, Majlis Keselamatan Negara.
 
 Run locally:      streamlit run app.py
 Share on the LAN: streamlit run app.py --server.address 0.0.0.0 --server.port 8501
@@ -9,6 +9,7 @@ choice survives a page reload and can be sent to someone else as a link.
 
 from __future__ import annotations
 
+import html
 import io
 
 import pandas as pd
@@ -20,9 +21,11 @@ import theme as T
 
 st.set_page_config(
     page_title="Papan Jadual BDR · BPPKN",
-    page_icon="🗓",
+    page_icon=str(T.FAVICON_FILE) if T.FAVICON_FILE.exists() else "🗓",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # "auto" keeps the sidebar open on a desktop but collapses it on a
+    # phone, where it would otherwise cover the board.
+    initial_sidebar_state="auto",
 )
 
 S.init_db()
@@ -37,6 +40,11 @@ def _secret(key: str, fallback: str) -> str:
 
 
 ADMIN_CODE = _secret("admin_code", "bppkn2026")
+
+# Whether email and phone numbers are visible to everyone who opens the board,
+# or only once the admin code is entered. Set to False if the app is on a
+# public URL and you would rather not publish staff contact details.
+SHOW_CONTACTS_TO_ALL = True
 
 
 # ------------------------------------------------------------ session helpers
@@ -82,6 +90,9 @@ grid = S.status_matrix(iso_year, iso_week, staff)
 
 def tr(key: str, **kw) -> str:
     return L.t(key, lang, **kw)
+
+
+see_contacts: bool = SHOW_CONTACTS_TO_ALL or st.session_state.is_admin
 
 
 # -------------------------------------------------------------------- sidebar
@@ -172,7 +183,9 @@ with tabs[0]:
     else:
         st.caption(tr("other_week", date=L.date_label(td, lang)))
 
-    st.markdown(T.roster(grid, staff, iso_year, iso_week, lang), unsafe_allow_html=True)
+    st.markdown(
+        T.roster(grid, staff, iso_year, iso_week, lang, show_contacts=see_contacts),
+        unsafe_allow_html=True)
     st.markdown(T.legend(lang, mode), unsafe_allow_html=True)
 
     stamp = S.last_updated(iso_year, iso_week) or tr("no_records")
@@ -329,35 +342,57 @@ with tabs[2]:
 with tabs[3]:
     if not st.session_state.is_admin:
         st.info(tr("dir_locked"))
-        st.markdown(
-            T.flat_table([tr("th_name"), tr("th_post"), tr("th_section")],
-                         staff[["name", "position", "section"]].values.tolist()),
-            unsafe_allow_html=True)
+        cols = ["name", "position", "section"]
+        heads = [tr("th_name"), tr("th_post"), tr("th_section")]
+        mono: set[int] = set()
+        raw: set[int] = set()
+        if see_contacts:
+            cols += ["email", "phone"]
+            heads += [tr("th_email"), tr("th_phone")]
+            mono, raw = {3, 4}, {3}
+        else:
+            st.caption(tr("contact_hidden"))
+        rows = staff[cols].values.tolist()
+        if see_contacts:
+            for r in rows:
+                addr = str(r[3] or "")
+                r[3] = (f'<a href="mailto:{html.escape(addr, quote=True)}">'
+                        f'{html.escape(addr)}</a>') if addr else ""
+        st.markdown(T.flat_table(heads, rows, mono=mono, raw=raw),
+                    unsafe_allow_html=True)
     else:
         st.markdown(f'<div class="panel-h">{tr("dir_edit")}</div>', unsafe_allow_html=True)
         st.caption(tr("dir_help"))
         sections = sorted(set(staff["section"].dropna()) | {"Lain-lain"})
         editor = st.data_editor(
-            staff[["id", "name", "position", "section"]],
+            staff[["id", "name", "position", "section", "email", "phone"]],
             num_rows="dynamic",
             hide_index=True,
             width="stretch",
             column_config={
                 "id": st.column_config.NumberColumn("ID", disabled=True, width="small"),
                 "name": st.column_config.TextColumn(tr("th_name"), required=True,
-                                                    width="large"),
-                "position": st.column_config.TextColumn(tr("th_post"), width="medium"),
+                                                    width="medium"),
+                "position": st.column_config.TextColumn(tr("th_post"), width="small"),
                 "section": st.column_config.SelectboxColumn(tr("th_section"),
                                                             options=sections,
-                                                            width="medium"),
+                                                            width="small"),
+                "email": st.column_config.TextColumn(tr("th_email"), width="medium"),
+                "phone": st.column_config.TextColumn(tr("th_phone"), width="small"),
             },
             key="dir_editor",
         )
         if st.button(tr("dir_save"), type="primary"):
+            odd = [str(r["name"]) for r in editor.to_dict("records")
+                   if str(r.get("email") or "").strip()
+                   and "@" not in str(r.get("email"))]
             res = S.save_staff(editor)
             st.success(tr("dir_saved", ins=res["inserted"], upd=res["updated"],
                           rem=res["removed"]))
-            st.rerun()
+            if odd:
+                st.warning(tr("email_odd", list=", ".join(odd)))
+            else:
+                st.rerun()
 
         st.divider()
         st.markdown(f'<div class="panel-h">{tr("week_tools")}</div>', unsafe_allow_html=True)

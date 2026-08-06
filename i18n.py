@@ -36,22 +36,24 @@ STATUS_SHORT = {
     "en": {S.OFFICE: "OFFICE", S.WFH: "WFH", S.LEAVE: "LEAVE", S.DUTY: "DUTY"},
 }
 STATUS_LABEL = {
-    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Hibrid",
-           S.LEAVE: "Cuti", S.DUTY: "Tugasan Rasmi"},
-    "en": {S.OFFICE: "In office", S.WFH: "Hybrid",
-           S.LEAVE: "On leave", S.DUTY: "Official Duty"},
+    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Bekerja dari rumah",
+           S.LEAVE: "Cuti", S.DUTY: "Tugas luar"},
+    "en": {S.OFFICE: "In office", S.WFH: "Work from home",
+           S.LEAVE: "On leave", S.DUTY: "Official duty"},
 }
 
 STRINGS: dict[str, dict[str, str]] = {
     # ---- masthead
-    "app_title": {"bm": "Dashboard Hari Bekerja Hibrid",
-                  "en": "Hybrid Working Day Dashboard"},
+    "app_title": {"bm": "Papan Jadual Bekerja Dari Rumah",
+                  "en": "Work From Home Roster"},
     "org_line": {
         "bm": "Bahagian Perisikan dan Pengurusan Krisis Negara "
               "&middot; Majlis Keselamatan Negara &middot; Putrajaya",
         "en": "National Intelligence and Crisis Management Division "
               "&middot; National Security Council &middot; Putrajaya"},
     "week": {"bm": "Minggu", "en": "Week"},
+    "crest_alt": {"bm": "Jata Majlis Keselamatan Negara",
+                  "en": "Crest of the National Security Council"},
 
     # ---- sidebar
     "sb_week": {"bm": "Minggu", "en": "Week"},
@@ -87,7 +89,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "today_mark": {"bm": "Hari ini", "en": "Today"},
 
     # ---- tabs
-    "tab_board": {"bm": "Jadual HBH Bahagian", "en": "WFH Board"},
+    "tab_board": {"bm": "Papan Jadual", "en": "Roster Board"},
     "tab_mine": {"bm": "Jadual Saya", "en": "My Schedule"},
     "tab_summary": {"bm": "Ringkasan", "en": "Summary"},
     "tab_dir": {"bm": "Direktori", "en": "Directory"},
@@ -141,6 +143,14 @@ STRINGS: dict[str, dict[str, str]] = {
     "th_name": {"bm": "Nama", "en": "Name"},
     "th_post": {"bm": "Jawatan", "en": "Position"},
     "th_section": {"bm": "Seksyen", "en": "Section"},
+    "th_email": {"bm": "E-mel", "en": "Email"},
+    "th_phone": {"bm": "No. Telefon", "en": "Phone"},
+    "contact_hidden": {
+        "bm": "Butiran hubungan hanya dipaparkan kepada pentadbir.",
+        "en": "Contact details are shown to administrators only."},
+    "email_odd": {
+        "bm": "Alamat e-mel ini kelihatan tidak lengkap dan tetap disimpan: {list}",
+        "en": "These email addresses look incomplete but were saved anyway: {list}"},
     "th_wfh_days": {"bm": "Hari BDR", "en": "WFH days"},
     "th_left": {"bm": "Baki", "en": "Remaining"},
     "dl_week": {"bm": "Muat turun jadual minggu ini",

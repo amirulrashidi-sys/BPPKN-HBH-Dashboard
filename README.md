@@ -149,6 +149,62 @@ Direktori tab, with the admin code entered. It is a spreadsheet-style table:
 Press **Simpan direktori** to apply. `staff_seed.csv` is only read once, on
 the very first run, so editing it later changes nothing — use the tab.
 
+### Filling in 25 people's contacts quickly
+
+Typing fifty fields into a web table is slow. Faster: **Muat turun sandaran**
+in the sidebar, open the `staff` sheet in Excel, fill the `email` and `phone`
+columns, save, then upload it under Direktori → Pulihkan dari sandaran. Leave
+the `id` column alone so schedules stay attached to the right people.
+
+### Who can see contact details
+
+By default everyone who opens the board sees the email and phone columns, and
+hovering a name on the roster shows the same. On a public URL that publishes a
+contact list for 25 named officers. To restrict it to admins, set this near the
+top of `app.py`:
+
+```python
+SHOW_CONTACTS_TO_ALL = False
+```
+
+Everyone still sees names, positions and sections; contacts appear only after
+the admin code is entered.
+
+### The crest
+
+`assets/mkn_logo.png` is the MKN crest, centred at the top of the board;
+`assets/mkn_favicon.png` is the same mark as the browser-tab icon. Both are
+192px and 96px palette PNGs, about 10 KB and 5 KB, cut down from the 3.8 MB
+original so they do not weigh on every page load.
+
+They are inlined into the page as data URIs rather than served as files, which
+avoids depending on Streamlit's static-file serving and works the same locally
+and on Streamlit Cloud. **Commit the `assets/` folder to GitHub** — it is not
+gitignored, but it is easy to miss when adding files by hand. If either file is
+absent the board still renders correctly, just without the crest.
+
+To swap in a different mark, replace the PNGs at the same paths and sizes. To
+resize how it appears, change `width`/`height` in the `.mast-crest img` rule in
+`theme.py` (currently 54px, and 44px on phones).
+
+### Adding another column
+
+Say you also want a grade or an extension number. Two edits in `store.py`:
+
+```python
+STAFF_FIELDS = ("name", "position", "section", "email", "phone", "grade")
+```
+
+and a matching line in `SCHEMA`:
+
+```sql
+grade TEXT DEFAULT '',
+```
+
+Existing databases pick the column up on next start through `_migrate()`,
+keeping all schedules. Then add the column to the editor and the read-only
+table in `app.py`'s Direktori tab, and a `th_grade` label to `i18n.py`.
+
 ## 9. Making the data survive restarts
 
 If you deploy publicly and want durable storage, the change is confined to
@@ -177,7 +233,8 @@ hand you something untested.
 | `store.py` | Database, policy rules, backup and restore |
 | `theme.py` | The two palettes, and the HTML for the day cards and roster grid |
 | `i18n.py` | Every piece of UI text, in Bahasa Melayu and English |
-| `staff_seed.csv` | The 25 officers, read on first run only |
+| `staff_seed.csv` | The 25 officers, read on first run only. Email and phone columns are blank; fill them in the app |
+| `assets/` | The MKN crest, shown centred in the masthead, and the browser-tab icon |
 | `requirements.txt` | Three dependencies |
 | `.streamlit/config.toml` | Colours, so Streamlit's own widgets match the board |
 | `wfh.db` | Created on first run. Not in git. This is your data. |

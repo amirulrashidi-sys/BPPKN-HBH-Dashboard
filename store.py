@@ -36,12 +36,20 @@ WFH_WEEKDAYS = (2, 3, 4)          # ISO weekday numbers, Monday = 1
 MAX_WFH_PER_WEEK = 2
 WORK_WEEKDAYS = (1, 2, 3, 4, 5)   # Monday to Friday
 
+# Editable text fields on a staff record, in the order they appear in the
+# directory. To add another (say "extension" or "grade"), append it here and
+# add a matching TEXT column to SCHEMA below; existing databases pick it up
+# automatically through _migrate().
+STAFF_FIELDS = ("name", "position", "section", "email", "phone")
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS staff (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT    NOT NULL,
     position   TEXT    DEFAULT '',
     section    TEXT    DEFAULT '',
+    email      TEXT    DEFAULT '',
+    phone      TEXT    DEFAULT '',
     sort_order INTEGER DEFAULT 999,
     active     INTEGER DEFAULT 1
 );
@@ -74,20 +82,43 @@ def connect():
         conn.close()
 
 
+def _migrate(conn) -> list[str]:
+    """Add any staff column this version expects but the database lacks.
+
+    SQLite's CREATE TABLE IF NOT EXISTS silently leaves an existing table
+    alone, so a database made by an earlier version keeps its old shape and
+    every query naming a new column fails. Adding them here means an already
+    deployed board upgrades in place, keeping its schedules.
+    """
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(staff)")}
+    added = []
+    for col in STAFF_FIELDS:
+        if col not in have:
+            conn.execute(f"ALTER TABLE staff ADD COLUMN {col} TEXT DEFAULT ''")
+            added.append(col)
+    return added
+
+
 def init_db() -> None:
-    """Create the tables, and seed the directory the first time only."""
+    """Create the tables, migrate older ones, and seed the directory once."""
     with connect() as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         empty = conn.execute("SELECT COUNT(*) FROM staff").fetchone()[0] == 0
     if empty and SEED_CSV.exists():
         seed = pd.read_csv(SEED_CSV)
+        for col in STAFF_FIELDS:
+            if col not in seed.columns:
+                seed[col] = ""
+        seed = seed.fillna("")
+        cols = ", ".join(STAFF_FIELDS)
+        marks = ", ".join("?" * len(STAFF_FIELDS))
         with connect() as conn:
             conn.executemany(
-                "INSERT INTO staff (name, position, section, sort_order, active) "
-                "VALUES (?, ?, ?, ?, 1)",
-                seed[["name", "position", "section", "sort_order"]].itertuples(
-                    index=False, name=None
-                ),
+                f"INSERT INTO staff ({cols}, sort_order, active) "
+                f"VALUES ({marks}, ?, 1)",
+                [tuple(row[c] for c in STAFF_FIELDS) + (row["sort_order"],)
+                 for _, row in seed.iterrows()],
             )
 
 
@@ -121,7 +152,7 @@ def shift_week(iso_year: int, iso_week: int, delta: int) -> tuple[int, int]:
 # --------------------------------------------------------------------- staff
 
 def list_staff(active_only: bool = True) -> pd.DataFrame:
-    q = "SELECT id, name, position, section, sort_order, active FROM staff"
+    q = f"SELECT id, {', '.join(STAFF_FIELDS)}, sort_order, active FROM staff"
     if active_only:
         q += " WHERE active = 1"
     q += " ORDER BY sort_order, id"
@@ -143,9 +174,16 @@ def save_staff(edited: pd.DataFrame) -> dict[str, int]:
     edited["name"] = edited["name"].fillna("").astype(str).str.strip()
     edited = edited[edited["name"] != ""]
 
-    for col, default in (("position", ""), ("section", "Lain-lain")):
+    defaults = {"position": "", "section": "Lain-lain", "email": "", "phone": ""}
+    for col in STAFF_FIELDS:
+        if col == "name":
+            continue
+        if col not in edited.columns:
+            edited[col] = ""
+        default = defaults.get(col, "")
         edited[col] = edited[col].fillna(default).astype(str).str.strip()
-        edited.loc[edited[col] == "", col] = default
+        if default:
+            edited.loc[edited[col] == "", col] = default
 
     # Keep each section's members contiguous, ordered by where the section first
     # appears in the table, so a newly added officer lands beside their colleagues
@@ -165,19 +203,21 @@ def save_staff(edited: pd.DataFrame) -> dict[str, int]:
         for order, row in enumerate(edited.to_dict("records"), start=1):
             sid = row.get("id")
             sid = None if sid is None or pd.isna(sid) else int(sid)
-            vals = (row["name"], row["position"], row["section"], order)
+            vals = tuple(row[c] for c in STAFF_FIELDS) + (order,)
             if sid is None:
+                cols = ", ".join(STAFF_FIELDS)
+                marks = ", ".join("?" * len(STAFF_FIELDS))
                 cur = conn.execute(
-                    "INSERT INTO staff (name, position, section, sort_order, active) "
-                    "VALUES (?, ?, ?, ?, 1)",
+                    f"INSERT INTO staff ({cols}, sort_order, active) "
+                    f"VALUES ({marks}, ?, 1)",
                     vals,
                 )
                 kept_ids.append(int(cur.lastrowid))
                 inserted += 1
             else:
+                sets = ", ".join(f"{c}=?" for c in STAFF_FIELDS)
                 conn.execute(
-                    "UPDATE staff SET name=?, position=?, section=?, sort_order=?, "
-                    "active=1 WHERE id=?",
+                    f"UPDATE staff SET {sets}, sort_order=?, active=1 WHERE id=?",
                     vals + (sid,),
                 )
                 kept_ids.append(sid)
@@ -314,7 +354,14 @@ def export_frames() -> dict[str, pd.DataFrame]:
 
 
 def import_frames(staff: pd.DataFrame, entries: pd.DataFrame) -> None:
+    """Replace all data. Backups predating a column are filled with blanks."""
+    staff = staff.copy()
+    for col in STAFF_FIELDS:
+        if col not in staff.columns:
+            staff[col] = ""
+    staff[list(STAFF_FIELDS)] = staff[list(STAFF_FIELDS)].fillna("")
     with connect() as conn:
+        _migrate(conn)
         conn.execute("DELETE FROM entry")
         conn.execute("DELETE FROM staff")
         staff.to_sql("staff", conn, if_exists="append", index=False)

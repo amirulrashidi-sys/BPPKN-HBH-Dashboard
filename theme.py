@@ -13,7 +13,10 @@ Streamlit's markdown renderer leaves the markup alone.
 
 from __future__ import annotations
 
+import base64
 import html
+from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 
@@ -21,6 +24,29 @@ import i18n as L
 import store as S
 
 MODES = ("light", "dark")
+
+ASSETS = Path(__file__).resolve().parent / "assets"
+LOGO_FILE = ASSETS / "mkn_logo.png"
+FAVICON_FILE = ASSETS / "mkn_favicon.png"
+
+
+@lru_cache(maxsize=4)
+def data_uri(path: str) -> str:
+    """Inline an image so it needs no static-file serving or URL routing.
+
+    Returns an empty string when the file is absent, so a missing asset costs
+    the crest and nothing else.
+    """
+    f = Path(path)
+    try:
+        encoded = base64.b64encode(f.read_bytes()).decode("ascii")
+    except OSError:
+        return ""
+    return f"data:image/png;base64,{encoded}"
+
+
+def logo_uri() -> str:
+    return data_uri(str(LOGO_FILE))
 
 PALETTES: dict[str, dict[str, str]] = {
     "light": {
@@ -97,13 +123,19 @@ html, body, .stMarkdown, .stMarkdown p { font-family:var(--body); color:var(--in
 hr, [data-testid="stDivider"] hr { border-color:var(--rule) !important; }
 
 /* ---------- masthead ---------- */
-.mast { background:var(--mast); border-bottom:3px solid var(--brass); padding:17px 24px 16px;
-        display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; }
+/* Crest on its own centred line, in the letterhead manner, so the title keeps
+   the full width beneath it and does not wrap. */
+.mast { background:var(--mast); border-bottom:3px solid var(--brass);
+        padding:14px 24px 16px; }
+.mast-crest { display:flex; justify-content:center; margin-bottom:11px; }
+.mast-crest img { display:block; width:54px; height:54px; }
+.mast-row { display:flex; justify-content:space-between; align-items:flex-end;
+        gap:20px; flex-wrap:wrap; }
 .mast .mast-title { font-family:var(--display); font-weight:700; font-size:25px;
         letter-spacing:-.01em; color:var(--mast-fg); line-height:1.2; margin:0; padding:0; }
 .mast .mast-sub { font-family:var(--body); font-size:12px; color:var(--mast-fg-70);
         letter-spacing:.04em; margin:5px 0 0; padding:0; line-height:1.35; }
-.mast-right { text-align:right; }
+.mast-right { text-align:right; justify-self:end; }
 .mast .mast-week-line { display:flex; align-items:baseline; justify-content:flex-end; gap:9px; }
 .mast .mast-week-eyebrow { font-family:var(--mono); font-size:10px; letter-spacing:.2em;
         font-weight:500; color:var(--brass-lit); text-transform:uppercase; }
@@ -200,6 +232,9 @@ table.flat th { font-family:var(--display); font-size:10px; letter-spacing:.12em
 table.flat td { font-family:var(--body); font-size:12px; color:var(--ink); padding:7px 12px;
       border-bottom:1px solid var(--rule); background:transparent; }
 table.flat td.num { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; }
+table.flat td.mono { font-family:var(--mono); font-size:11px; white-space:nowrap; }
+table.flat td a { color:var(--s-BDR); text-decoration:none; }
+table.flat td a:hover { text-decoration:underline; }
 
 /* ---------- Streamlit widgets: declared, not inherited ---------- */
 [data-testid="stSidebar"] { background:var(--panel); border-right:1px solid var(--rule); }
@@ -284,8 +319,12 @@ label[data-baseweb="checkbox"] span { color:var(--ink) !important; }
 
 @media (max-width:820px) {
   .strip { grid-template-columns:repeat(2,1fr); }
-  .mast { padding:14px 16px; }
+  .mast { padding:12px 16px 14px; }
   .mast .mast-title { font-size:19px; }
+  .mast-crest img { width:44px; height:44px; }
+  .mast-row { gap:8px; }
+  .mast-right { text-align:left; }
+  .mast .mast-week-line { justify-content:flex-start; }
 }
 @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
 """
@@ -342,8 +381,11 @@ def short_name(full: str, limit: int = 24) -> str:
 # ------------------------------------------------------------------ masthead
 
 def masthead(iso_year: int, iso_week: int, lang: str) -> str:
+    uri = logo_uri()
+    crest = (f'<div class="mast-crest"><img src="{uri}" alt="'
+             f'{L.t("crest_alt", lang)}"></div>') if uri else ''
     return "".join([
-        '<div class="mast"><div>',
+        '<div class="mast">', crest, '<div class="mast-row"><div>',
         f'<div class="mast-title">{L.t("app_title", lang)}</div>',
         f'<div class="mast-sub">{L.t("org_line", lang)}</div>',
         '</div><div class="mast-right">',
@@ -352,7 +394,7 @@ def masthead(iso_year: int, iso_week: int, lang: str) -> str:
         f'<span class="mast-week-no">{iso_week:02d}</span></div>',
         f'<div class="mast-week-range">'
         f'{e(L.week_range_label(iso_year, iso_week, lang))}</div>',
-        '</div></div>',
+        '</div></div></div>',
     ])
 
 
@@ -414,7 +456,9 @@ def day_strip(grid: pd.DataFrame, staff: pd.DataFrame, iso_year: int, iso_week: 
 # --------------------------------------------------------------- roster grid
 
 def roster(grid: pd.DataFrame, staff: pd.DataFrame, iso_year: int, iso_week: int,
-           lang: str) -> str:
+           lang: str, show_contacts: bool = False) -> str:
+    """The week grid. With show_contacts, hovering a name reveals their
+    email and phone as a browser tooltip."""
     days = S.week_dates(iso_year, iso_week)
     td = S.today()
     notes = grid.attrs.get("notes")
@@ -440,8 +484,12 @@ def roster(grid: pd.DataFrame, staff: pd.DataFrame, iso_year: int, iso_week: int
         parts.append(f'<tr class="sect"><td colspan="6"><span>{e(section)}'
                      f'<i>{meta}</i></span></td></tr>')
         for r in rows.itertuples(index=False):
+            contact = " · ".join(
+                x for x in (getattr(r, "email", ""), getattr(r, "phone", "")) if x
+            ) if show_contacts else ""
+            tip = f' title="{e(contact)}"' if contact else ""
             parts.append('<tr>')
-            parts.append(f'<td class="nm"><div><div class="nm-name">{e(r.name)}</div>'
+            parts.append(f'<td class="nm"{tip}><div><div class="nm-name">{e(r.name)}</div>'
                          f'<div class="nm-post">{e(r.position)}</div></div></td>')
             for wd in S.WORK_WEEKDAYS:
                 status = grid.at[r.id, wd]
@@ -536,21 +584,24 @@ def coverage_flags(grid: pd.DataFrame, staff: pd.DataFrame, iso_year: int,
 # --------------------------------------------------------------- flat tables
 
 def flat_table(headers: list[str], rows: list[list],
-               numeric: set[int] | None = None) -> str:
+               numeric: set[int] | None = None,
+               mono: set[int] | None = None,
+               raw: set[int] | None = None) -> str:
     """A themed read-only table, used instead of st.dataframe.
 
     st.dataframe draws into a canvas that follows Streamlit's own base theme,
     so it cannot follow the light/dark switch in this app.
     """
-    numeric = numeric or set()
+    numeric, mono, raw = numeric or set(), mono or set(), raw or set()
     parts = ['<div class="board-wrap"><table class="flat"><thead><tr>']
     parts += [f'<th>{e(h)}</th>' for h in headers]
     parts.append('</tr></thead><tbody>')
     for row in rows:
         parts.append('<tr>')
         for i, cell in enumerate(row):
-            cls = ' class="num"' if i in numeric else ''
-            parts.append(f'<td{cls}>{e(cell)}</td>')
+            cls = ' class="num"' if i in numeric else (' class="mono"' if i in mono else '')
+            body = str(cell) if i in raw else e(cell)
+            parts.append(f'<td{cls}>{body}</td>')
         parts.append('</tr>')
     parts.append('</tbody></table></div>')
     return "".join(parts)
