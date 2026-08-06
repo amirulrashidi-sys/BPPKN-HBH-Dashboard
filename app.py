@@ -20,7 +20,7 @@ import store as S
 import theme as T
 
 st.set_page_config(
-    page_title="Papan Jadual BDR · BPPKN",
+    page_title="Dashboard HBH · BPPKN",
     page_icon=str(T.FAVICON_FILE) if T.FAVICON_FILE.exists() else "🗓",
     layout="wide",
     # "auto" keeps the sidebar open on a desktop but collapses it on a
