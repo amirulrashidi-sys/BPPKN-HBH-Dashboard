@@ -36,10 +36,10 @@ STATUS_SHORT = {
     "en": {S.OFFICE: "OFFICE", S.WFH: "WFH", S.LEAVE: "LEAVE", S.DUTY: "DUTY"},
 }
 STATUS_LABEL = {
-    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Bekerja dari rumah",
-           S.LEAVE: "Cuti", S.DUTY: "Tugas luar"},
-    "en": {S.OFFICE: "In office", S.WFH: "Work from home",
-           S.LEAVE: "On leave", S.DUTY: "Official duty"},
+    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Hibrid",
+           S.LEAVE: "Cuti", S.DUTY: "Tugasan Rasmi"},
+    "en": {S.OFFICE: "In office", S.WFH: "Hybrid",
+           S.LEAVE: "On leave", S.DUTY: "Official Duty"},
 }
 
 STRINGS: dict[str, dict[str, str]] = {
