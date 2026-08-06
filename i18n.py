@@ -32,20 +32,20 @@ MONTH = {
 
 # Short codes shown in the grid cells and the day cards.
 STATUS_SHORT = {
-    "bm": {S.OFFICE: "PEJABAT", S.WFH: "BDR", S.LEAVE: "CUTI", S.DUTY: "LUAR"},
+    "bm": {S.OFFICE: "PEJABAT", S.WFH: "HBH", S.LEAVE: "CUTI", S.DUTY: "LUAR"},
     "en": {S.OFFICE: "OFFICE", S.WFH: "WFH", S.LEAVE: "LEAVE", S.DUTY: "DUTY"},
 }
 STATUS_LABEL = {
-    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Bekerja dari rumah",
-           S.LEAVE: "Cuti", S.DUTY: "Tugas luar"},
-    "en": {S.OFFICE: "In office", S.WFH: "Work from home",
+    "bm": {S.OFFICE: "Di pejabat", S.WFH: "Hibrid",
+           S.LEAVE: "Cuti", S.DUTY: "Tugasan Rasmi"},
+    "en": {S.OFFICE: "In office", S.WFH: "Hibrid",
            S.LEAVE: "On leave", S.DUTY: "Official duty"},
 }
 
 STRINGS: dict[str, dict[str, str]] = {
     # ---- masthead
-    "app_title": {"bm": "Papan Jadual Bekerja Dari Rumah",
-                  "en": "Work From Home Roster"},
+    "app_title": {"bm": "Dashboard Hari Bekerja Hibrid",
+                  "en": "Hybrid Working Schedule"},
     "org_line": {
         "bm": "Bahagian Perisikan dan Pengurusan Krisis Negara "
               "&middot; Majlis Keselamatan Negara &middot; Putrajaya",
